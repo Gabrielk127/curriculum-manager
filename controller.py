@@ -1,41 +1,24 @@
 from model import ResumeModel, UserModel
 
-
-
 class UserController:
-    @staticmethod
-    def register_user(username, password):
-        return UserModel.register_user(username, password)
+    def user_register(username, password):
+        return UserModel.user_register(username, password)
 
-    @staticmethod
-    def authenticate_user(username, password):
-        return UserModel.authenticate_user(username, password)
+    def user_authenticate(username, password):
+        return UserModel.user_authenticate(username, password)
 
 class ResumeController:
-    @staticmethod
-    def handle_save_resume(data):
-        """
-        Gera e salva o currículo em HTML.
-        """
-        html_content = ResumeModel.generate_html(data)
-        ResumeModel.save_html_to_file(html_content)
+    def handle_save_resume(data, username):
+            data['username'] = username  
+            resume_id = ResumeModel.save_resume(data, username) 
+            html_content = ResumeModel.generate_html(data)  
+            ResumeModel.save_html_to_file(html_content)  
+            return resume_id
 
-
-
-    @staticmethod
-    def handle_export_pdf(data):
-        """
-        Gera e salva o currículo em PDF.
-        """
-        file_path = "curriculo.pdf"
+    def export_pdf(data):
+        file_path = f"{data['name']}_curriculo.pdf"
         ResumeModel.generate_pdf(data, file_path)
         return file_path
 
-    @staticmethod
-    def handle_export_pdf(data):
-        """
-        Gera e salva o currículo em PDF.
-        """
-        file_path = "curriculo.pdf"
-        ResumeModel.generate_pdf(data, file_path)
-        return file_path
+    def list_resumes(username):
+        return ResumeModel.all_resumes(username)

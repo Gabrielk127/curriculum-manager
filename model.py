@@ -3,8 +3,7 @@ from xhtml2pdf import pisa
 import os
 import webbrowser
 import hashlib
-
-
+from bson.objectid import ObjectId
 
 def get_db():
     client = MongoClient("mongodb://localhost:27017/")
@@ -12,35 +11,29 @@ def get_db():
     return db
 
 class UserModel:
-    @staticmethod
     def hash_password(password):
         return hashlib.sha256(password.encode()).hexdigest()
 
-    @staticmethod
-    def register_user(username, password):
+    def user_register(username, password):
         db = get_db()
         users = db['users']
 
         if users.find_one({"username": username}):
-            return False  # Usuário já existe
+            return False  
 
         hashed_password = UserModel.hash_password(password)
         users.insert_one({"username": username, "password": hashed_password})
         return True
 
-    @staticmethod
-    def authenticate_user(username, password):
+    def user_authenticate(username, password):
         db = get_db()
         users = db['users']
 
         hashed_password = UserModel.hash_password(password)
         user = users.find_one({"username": username, "password": hashed_password})
-
         return user is not None
 
-
 class ResumeModel:
-    @staticmethod
     def generate_html(data):
         html = f"""
         <html>
@@ -59,7 +52,7 @@ class ResumeModel:
                     width: 80%;
                     height: 100%;
                     margin: auto;
-                    padding: 10px;  /* Reduzindo o padding */
+                    padding: 10px;
                     box-sizing: border-box;
                     background-color: white;
                     border-radius: 10px;
@@ -69,7 +62,7 @@ class ResumeModel:
                     margin-bottom: 5px;                 
                 }}
                 .header h1 {{
-                    font-size: 24px;  /* Tamanho da fonte ajustado */
+                    font-size: 24px; 
                     color: #2c3e50;
                     margin: 0;
                 }}
@@ -81,7 +74,7 @@ class ResumeModel:
                 .contact-info {{
                     display: flex;
                     justify-content: center;
-                    gap: 10px;  /* Diminuindo o espaço */
+                    gap: 10px; 
                     margin-top: 5px;                
                 }}
                 .contact-info p {{
@@ -92,7 +85,7 @@ class ResumeModel:
                     margin-bottom: 20px;
                 }}
                 .section h2 {{
-                    font-size: 18px;  /* Ajuste no tamanho do título */
+                    font-size: 18px; 
                     color: #000;
                     border-bottom: 2px solid #000;
                     padding-bottom: 5px;
@@ -101,17 +94,17 @@ class ResumeModel:
                     background-color: #f4f4f4;
                     border: 1px solid #dcdcdc;
                     border-radius: 10px;
-                    padding: 10px;  /* Ajuste no padding */
+                    padding: 10px; 
                     margin-bottom: 10px;
                     box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);                }}
                 .card p {{
-                    font-size: 12px;  /* Ajuste no tamanho da fonte */
+                    font-size: 12px; 
                     line-height: 1.4;
                     margin: 5px 0;
                     color: #34495e;                }}
                 .footer {{
                     text-align: center;
-                    font-size: 10px;  /* Ajuste no tamanho da fonte */
+                    font-size: 10px; 
                     color: #7f8c8d;
                     margin-top: 20px;                }}
             </style>
@@ -168,27 +161,21 @@ class ResumeModel:
                         <p>GitHub: {data['github']}</p>
                     </div>
                 </div>
-
-                <div class="footer">
-                    <p>Currículo gerado automaticamente usando sistema online</p>
-                </div>
             </div>
         </body>
         </html>
         """
         return html
 
-    @staticmethod
     def save_html_to_file(html_content, file_path="curriculo_preview.html"):
         try:
             with open(file_path, "w", encoding="utf-8") as file:
                 file.write(html_content)
             webbrowser.open(f"file://{os.path.realpath(file_path)}")
-            print(f"Arquivo HTML salvo com sucesso em: {file_path}")
+            print(f"Salvo com sucesso em: {file_path}")
         except Exception as e:
-            print(f"Erro ao salvar o arquivo HTML: {e}")
+            print(f"Erro ao salvar: {e}")
 
-    @staticmethod
     def generate_pdf(data, file_path="curriculo.pdf"):
         html_content = ResumeModel.generate_html(data)
         try:
@@ -197,23 +184,24 @@ class ResumeModel:
                 if pisa_status.err:
                     print("Erro ao gerar PDF")
                 else:
-                    print(f"PDF gerado com sucesso em: {file_path}")
+                    print(f"PDF gerado com sucesso: {file_path}")
         except Exception as e:
-            print(f"Erro ao gerar PDF: {e}")
+            print(f"Erro ao gerar: {e}")
 
+    def save_resume(data, username):
+            db = get_db()
+            resumes = db['resumes']
+            data['username'] = username   
+            result = resumes.insert_one(data)
+            return result.inserted_id
 
-def save_resume(data):
-    db = get_db()
-    resumes = db['resumes']
-    result = resumes.insert_one(data)
-    return result.inserted_id
+    def get_resume_by_id(resume_id):
+        db = get_db()
+        resumes = db['resumes']
+        resume = resumes.find_one({"_id": ObjectId(resume_id)})
+        return resume
 
-def get_resume_by_id(resume_id):
-    db = get_db()
-    resumes = db['resumes']
-    resume = resumes.find_one({"_id": resume_id})
-    return resume
-
-def generate_resume_pdf(resume_id, file_path):
-    resume_data = get_resume_by_id(resume_id)
-    return ResumeModel.generate_pdf(resume_data, file_path)
+    def all_resumes(username):
+        db = get_db()
+        resumes = db['resumes']
+        return list(resumes.find({"username": username}))
